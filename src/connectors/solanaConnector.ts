@@ -153,31 +153,30 @@ class SolanaConnector {
         coloredInfo("Fetching tokens existing in your wallet", 'solana');
 
         try {
-            const accounts = await this.solanaConnection?.getParsedProgramAccounts(
-                TOKEN_PROGRAM_ID,
-                { filters: this.filters }
-            );
+            if (this.publicKey) {
+                const accounts = await this.solanaConnection?.getParsedTokenAccountsByOwner(this.publicKey, { programId: TOKEN_PROGRAM_ID });
 
-            if (!accounts) {
-                coloredError("There is an error with your wallet credentials and other relative issues");
-                return undefined;
+                if (!accounts) {
+                    coloredError("There is an error with your wallet credentials and other relative issues");
+                    return undefined;
+                }
+
+                coloredWarn("Extracting token data like (contractAddress and tokenBalance)", 'solana');
+
+                const tokensAddresses = await this.getWalletTokens(accounts, []);  // Pass an empty array
+
+                if (tokensAddresses.length < 1) {
+                    coloredDebug("You do not have any token in your wallet");
+                    return undefined;
+                }
+
+                coloredInfo(`Token Addresses: ${JSON.stringify(tokensAddresses)}`);
+                const tokenIds = tokensAddresses.map(token => token.tokenAddress).join(',');
+                const tokenSymbols = tokensAddresses.map(token => token.tokenSymbol).join(",");
+                coloredInfo(`Token ID/Addresses: ${tokenIds}`, "solana");
+
+                return { tokensAddresses, tokenIds, tokenSymbols };
             }
-
-            coloredWarn("Extracting token data like (contractAddress and tokenBalance)", 'solana');
-
-            const tokensAddresses = await this.getWalletTokens(accounts, []);  // Pass an empty array
-
-            if (tokensAddresses.length < 1) {
-                coloredDebug("You do not have any token in your wallet");
-                return undefined;
-            }
-
-            coloredInfo(`Token Addresses: ${JSON.stringify(tokensAddresses)}`);
-            const tokenIds = tokensAddresses.map(token => token.tokenAddress).join(',');
-            const tokenSymbols = tokensAddresses.map(token => token.tokenSymbol).join(",");
-            coloredInfo(`Token ID/Addresses: ${tokenIds}`, "solana");
-
-            return { tokensAddresses, tokenIds, tokenSymbols };
         } catch (error) {
             console.error('Error retrieving user tokens:', error);
             return undefined;
@@ -186,7 +185,8 @@ class SolanaConnector {
 
 
     getWalletTokens = async (accounts: any, tokensAddresses: TokenInfo[]) => {
-        for (const response of accounts) {
+        coloredWarn(JSON.stringify(accounts));
+        for (const response of accounts.value) {
             const parsedAccountInfo = response.account.data;
             // Extracting token details for a specific account
             const tokenId: string = response.pubkey.toString();

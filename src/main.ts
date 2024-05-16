@@ -8,7 +8,8 @@ import DatabaseConnector from './connectors/sqlite3Connector';
 import calculateProfit from './utils/calculateProfit';
 import { extractSymbols } from './utils/extractTokenSymbols';
 import { Wallet } from '@project-serum/anchor';
-
+import { SnipeListCache } from './cache';
+import { PublicKey } from '@solana/web3.js';
 const AMOUNT_OF_TOKENS_TO_SWAP = (Number(process.env.AMOUNT_OF_TOKENS_TO_SWAP) / 100) || 1;
 const EXPECTED_PERCENTAGE_PROFIT = (Number(process.env.EXPECTED_PERCENTAGE_PROFIT) / 100) || 0.5;
 interface TokenInfo {
@@ -76,6 +77,37 @@ const main = async () => {
         await solana.getBalance().then(async (balance: number | undefined) => {
             coloredDebug(`Your Balance: ${balance} SOL`)
             coloredWarn("-----------------------------------------------------------\n\n")
+            const snipeListCache = new SnipeListCache();
+            snipeListCache.init();
+            let list = snipeListCache.getSnipeList()
+            coloredInfo(`list ${JSON.stringify(list)}`);
+            // 计算用于购买的总SOL数量
+            let totalSOLForPurchase = 0
+            if (balance) {
+                totalSOLForPurchase = balance * 0.01;
+            }
+            for (let index = 0; index < list.length; index++) {
+                const mintAddress = list[index];
+                // 检查mintAddress是否在snipeList中
+                if (snipeListCache.isInList(mintAddress)) {
+                    // 调用 createOrderLimit 来创建买入代币的限价单
+                    try {
+                        coloredInfo(`totalSOLForPurchase ${totalSOLForPurchase}`);
+                        await jupiter.createOrderLimit(
+                            totalSOLForPurchase, // 卖出的SOL数量，用于购买USDC
+                            0, // 预期收到的代币数量，这里设置为0因为我们不确切知道会收到多少USDC
+                            wallet!, // 用户的钱包
+                            'So11111111111111111111111111111111111111112', // 卖出代币的地址，即SOL的地址
+                            mintAddress // 购买代币的地址
+                        );
+                        coloredInfo(`Order created for ${totalSOLForPurchase} SOL worth of ${mintAddress}`);
+                    } catch (error:any) {
+                        coloredError(`Failed to create order: ${error.message}`);
+                    }
+
+                    await sleep(2500); // 等待2.5秒
+                }
+            }
             await solana.getUserTokens().then(async (response) => {
                 if (response !== undefined) {
                     coloredWarn("------------------------------------------------------\n\n")
