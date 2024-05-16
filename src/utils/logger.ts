@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 enum LogType {
     INFO = 'INFO',
     WARN = 'WARN',
@@ -26,20 +28,39 @@ const colorizeLog = (message: string, type: LogType): string => {
     return `${color}${message}\x1b[0m`; // Reset color after message
 }
 
-const coloredInfo = (message: string, sender: string = "bot"): void => {
-    console.info(colorizeLog(`[${sender.toUpperCase()}]::: ${message}`, LogType.INFO));
-}
 
-const coloredWarn = (message: string, sender: string = "bot"): void => {
-    console.warn(colorizeLog(`[${sender.toUpperCase()}]::: ${message}`, LogType.WARN));
-}
+// 日志文件的默认存储路径
+const logFilePath = path.join(__dirname, '../../logs/bot.log');
 
-const coloredError = (message: string, sender: string = "bot"): void => {
-    console.error(colorizeLog(`[${sender.toUpperCase()}]::: ${message}`, LogType.ERROR));
-}
+// 写入日志文件的辅助函数
+const writeToLog = (message: string) => {
+    fs.appendFileSync(logFilePath, `${new Date().toISOString()} - ${message}\n`, 'utf-8');
+};
 
-const coloredDebug = (message: string, sender: string = "bot"): void => {
-    console.error(colorizeLog(`[${sender.toUpperCase()}]::: ${message}`, LogType.DEBUG));
-}
+// 修改彩色日志函数以同时写入控制台和日志文件
+const coloredLog = (message: string, type: LogType, sender: string = 'bot') => {
+    const coloredMessage = colorizeLog(`[${sender.toUpperCase()}]::: ${message}`, type);
+    switch (type) {
+        case LogType.INFO:
+            console.info(coloredMessage);
+            break;
+        case LogType.WARN:
+            console.warn(coloredMessage);
+            break;
+        case LogType.ERROR:
+            console.error(coloredMessage);
+            break;
+        case LogType.DEBUG:
+            console.log(coloredMessage);
+            break;
+        default:
+            console.log(coloredMessage); // 默认使用 log
+    }
+    writeToLog(coloredMessage); // 同时写入日志文件
+};
 
-export { coloredInfo, coloredWarn, coloredError, coloredDebug }
+// 更新彩色日志函数的导出
+export const coloredInfo = (message: string, sender: string = 'bot') => coloredLog(message, LogType.INFO, sender);
+export const coloredWarn = (message: string, sender: string = 'bot') => coloredLog(message, LogType.WARN, sender);
+export const coloredError = (message: string, sender: string = 'bot') => coloredLog(message, LogType.ERROR, sender);
+export const coloredDebug = (message: string, sender: string = 'bot') => coloredLog(message, LogType.DEBUG, sender);
