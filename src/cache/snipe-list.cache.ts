@@ -1,19 +1,22 @@
 import fs from 'fs';
 import path from 'path';
+import { EventEmitter } from 'events';
 import { coloredInfo, coloredError, coloredWarn, coloredDebug } from "../utils/logger";
 import sleep from '../utils/sleepTimout';
-export class SnipeListCache {
-  private snipeList: Set<string> = new Set<string>(); // 明确指定 Set 里的元素类型为 string
+
+export class SnipeListCache extends EventEmitter {
+  private snipeList: Set<string> = new Set<string>();
 
   private fileLocation = path.join(__dirname, '../../snipe-list.txt');
 
   constructor() {
-    this.loadSnipeList()
+    super(); // 调用父类构造函数，初始化事件发射器
+    this.loadSnipeList();
   }
 
   public async init() {
     while (true) {
-      this.loadSnipeList()
+      this.loadSnipeList();
       await sleep(2500);
     }
   }
@@ -22,26 +25,33 @@ export class SnipeListCache {
     return this.snipeList.has(mint);
   }
 
-  public getSnipeList(){
-    return Array.from(this.snipeList); // 将 Set 转换为数组
+  public getSnipeList() {
+    return Array.from(this.snipeList);
   }
-
   private loadSnipeList() {
     coloredInfo(`Refreshing snipe list...`);
 
-    const count = this.snipeList.size;
-    const data = fs.readFileSync(this.fileLocation, 'utf-8');
-    const lines = data
+    // 读取文件并获取当前的代币地址列表
+    const allLines = fs.readFileSync(this.fileLocation, 'utf-8')
       .split('\n')
-      .map((line) => line.trim()) // 去除每行首尾空白字符
-      .filter((line) => line.length > 0); // 过滤掉空行
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
 
-    // 使用 Set 的构造函数时明确指定类型为 string
-    this.snipeList = new Set<string>(lines);
+    // 找出新的代币地址
+    const newAddresses = allLines.filter(address => !this.snipeList.has(address));
 
-    if (this.snipeList.size !== count) {
-      coloredInfo(`Loaded snipe list: ${this.snipeList.size}`);
+    // 更新当前的snipeList
+    this.snipeList = new Set<string>(allLines);
 
+    // 如果有新的代币地址，发射事件通知
+    if (newAddresses.length > 0) {
+      coloredInfo(`New addresses added to snipe list: ${newAddresses.join(', ')}`);
+      this.emit('newAddressesDetected', newAddresses);
+    }
+
+    // 如果snipeList的大小发生了变化，说明有新的地址被添加或旧的地址被移除
+    if (this.snipeList.size !== allLines.length) {
+      coloredWarn(`Some addresses in the snipe list are invalid and have been removed.`);
     }
   }
 }

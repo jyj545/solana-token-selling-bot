@@ -1,3 +1,4 @@
-import main from "./main";
+import bot from "./main";
 
-main();
+bot.main();
+bot.buySnipe();

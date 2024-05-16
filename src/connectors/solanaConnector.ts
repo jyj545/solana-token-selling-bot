@@ -1,11 +1,11 @@
 import 'dotenv/config';
 import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from '@project-serum/anchor/dist/cjs/utils/token';
+// import { TOKEN_PROGRAM_ID } from '@project-serum/anchor/dist/cjs/utils/token';
 import { coloredInfo, coloredError, coloredWarn, coloredDebug } from "../../src/utils/logger";
 import { Wallet } from '@project-serum/anchor';
 import base58 from 'bs58';
 import { Client, UtlConfig, Token } from '@solflare-wallet/utl-sdk';
-
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 const HTTP = process.env.RPC_ENDPOINT;
 const WS = process.env.RPC_WS_ENDPOINT;
 
@@ -214,6 +214,21 @@ class SolanaConnector {
 
         // Return after the loop completes
         return tokensAddresses;
+    }
+
+
+    isTokenAddress = async (address: string) => {
+        try {
+            const publicKey = new PublicKey(address);
+            const accountInfo = await this.solanaConnection?.getAccountInfo(publicKey);
+            // 检查账户的程序ID是否为代币程序ID
+            if (accountInfo?.owner.equals(TOKEN_PROGRAM_ID)) {
+                return true;
+            }
+        } catch (error) {
+            console.error('Failed to check if address is a token address:', error);
+        }
+        return false;
     }
 }
 
