@@ -18,7 +18,12 @@ interface TokenInfo {
     decimals: number | null;
     tokenSymbol: string;
 }
-
+interface tokenStatus {
+    rug_ratio: number | null;
+    renounced_mint: number | null;
+    burn_status: string;
+    liquidity: number | null;
+}
 interface ResponseInterface {
     tokensAddresses: TokenInfo[];
     tokenIds: string;
@@ -63,7 +68,7 @@ const processOpenOrders = async (symbol: string, openOrderTokenAddresses: string
         }
     }
 }
-const getRugRatio = async (tokenAddress: PublicKey): Promise<number> => {
+const checkTokenInfo = async (tokenAddress: PublicKey): Promise<any> => {
     const address = tokenAddress.toString();
     const url = `https://gmgn.ai/defi/quotation/v1/tokens/sol/${address}`;
 
@@ -71,65 +76,65 @@ const getRugRatio = async (tokenAddress: PublicKey): Promise<number> => {
         const response = await fetch(url);
         if (!response.ok) {
             coloredDebug(`Error fetching rug ratio: ${response.status}`);
-            return 1
+            return {}
         }
         const data = await response.json();
         coloredDebug(`gmgn.ai: ${JSON.stringify(data.data)}`);
-        return data.data.token.rug_ratio;
+        return data.data.token;
     } catch (e: any) {
         coloredDebug(`Failed to fetch rug ratio: ${e.message}`);
-        return 1
+        return {}
     }
 }
 const buySnipe = async () => {
     const solana = new SolanaConnector();
-        const wallet = await solana.getWallet()
-        const connection = await solana.getSolanaConnection();
-        const jupiter = new JupiterConnector(wallet!, connection!);
+    const wallet = await solana.getWallet()
+    const connection = await solana.getSolanaConnection();
+    const jupiter = new JupiterConnector(wallet!, connection!);
 
-        const snipeListCache = new SnipeListCache();
-        snipeListCache.init();
-        snipeListCache.on('newAddressesDetected', async (updatedList: Set<string>) => {
-            console.log('Snipe list updated:', updatedList);
-            // 获取当前余额
-            await solana.getBalance().then(async (balance: number | undefined) => {
-                let totalSOLForPurchase = 0
-                if (balance) {
-                    totalSOLForPurchase = balance * 0.01;
-                }
-                coloredDebug(`Your Balance: ${balance} SOL`)
-                coloredWarn("-----------------------------------------------------------\n\n")
-                // 为每个新代币创建订单的异步函数
-                const createOrdersForTokens = async (tokens: string[]) => {
-                    for (const mintAddress of tokens) {
-                        try {
-                            const isTokenAddress = await solana.isTokenAddress(mintAddress);
-                            if (isTokenAddress) {
-                                const rug_ratio = await getRugRatio(new PublicKey(mintAddress));
-                                if (!rug_ratio) {
-                                    coloredInfo(`rug_ratio ${rug_ratio}`);
-                                    await jupiter.createOrderLimit(
-                                        totalSOLForPurchase / tokens.length, // 分配给每个代币的SOL数量
-                                        0,
-                                        wallet!,
-                                        'So11111111111111111111111111111111111111112',
-                                        mintAddress
-                                    );
-                                    coloredInfo(`Order created for ${totalSOLForPurchase / tokens.length} SOL worth of ${mintAddress}`);
-                                }
+    const snipeListCache = new SnipeListCache();
+    snipeListCache.init();
+    snipeListCache.on('newAddressesDetected', async (updatedList: Set<string>) => {
+        console.log('Snipe list updated:', updatedList);
+        // 获取当前余额
+        await solana.getBalance().then(async (balance: number | undefined) => {
+            let totalSOLForPurchase = 0
+            if (balance) {
+                totalSOLForPurchase = balance * 0.01;
+            }
+            coloredDebug(`Your Balance: ${balance} SOL`)
+            coloredWarn("-----------------------------------------------------------\n\n")
+            // 为每个新代币创建订单的异步函数
+            const createOrdersForTokens = async (tokens: string[]) => {
+                for (const mintAddress of tokens) {
+                    try {
+                        const isTokenAddress = await solana.isTokenAddress(mintAddress);
+                        if (isTokenAddress) {
+                            const token = await checkTokenInfo(new PublicKey(mintAddress));
+                            if (!token?.rug_ratio&&token?.renounced_mint === 1&& token?.top_10_holder_rate <0.3 && token?.burn_status != "none" && token?.pool_info?.liquidity >= 20000) {
+                                coloredInfo(`rug_ratio ${token?.rug_ratio}`);
+                                await jupiter.createOrderLimit(
+                                    totalSOLForPurchase / tokens.length, // 分配给每个代币的SOL数量
+                                    0,
+                                    wallet!,
+                                    'So11111111111111111111111111111111111111112',
+                                    mintAddress
+                                );
+                                coloredInfo(`Order created for ${totalSOLForPurchase / tokens.length} SOL worth of ${mintAddress}`);
                             }
-                        } catch (error: any) {
-                            coloredError(`Failed to create order for ${mintAddress}: ${error.message}`);
                         }
-                        // 避免过快地执行操作，可以在这里添加适当的延迟
+                    } catch (error: any) {
+                        coloredError(`Failed to create order for ${mintAddress}: ${error.message}`);
                     }
-                };
-                coloredInfo(`Order created for ${updatedList} `);
+                    // 避免过快地执行操作，可以在这里添加适当的延迟
+                }
+            };
+            coloredInfo(`Order created for ${updatedList} `);
 
-                // 执行订单创建逻辑
-                await createOrdersForTokens(Array.from(updatedList));
-            });
+            // 执行订单创建逻辑
+            await createOrdersForTokens(Array.from(updatedList));
         });
+    });
 }
 const main = async () => {
     try {
@@ -179,7 +184,7 @@ const main = async () => {
     }
 }
 
-export default {main,buySnipe};
+export default { main, buySnipe };
 
 
 
