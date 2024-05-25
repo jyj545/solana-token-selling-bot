@@ -114,7 +114,6 @@ class SolanaConnector {
             coloredError("Please add your wallet's private key into the `.env` file under the variable WALLET_PRIVATE_KEY={your private key}")
             return undefined;
         }
-
         const privateKey = process.env.WALLET_PRIVATE_KEY;
         this.wallet = new Wallet(Keypair.fromSecretKey(base58.decode(privateKey!)));
 

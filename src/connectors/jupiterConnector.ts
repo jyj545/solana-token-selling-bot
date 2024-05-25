@@ -127,6 +127,8 @@ class JupiterConnector {
     */
     createOrderLimit = async (amountToSell: number, amountToExpect: number, wallet: Wallet, sellTokenAddress: string, buyTokenAddress: string): Promise<void> => {
         coloredInfo("Creating a new Limit Order");
+        coloredInfo(`Amount to sell 444: ${amountToSell}`)
+
         coloredInfo(`Amount to sell: ${new BN(amountToSell)}`)
         coloredInfo(`Amount to get: ${new BN(amountToExpect)}`)
 

@@ -98,9 +98,9 @@ const buySnipe = async () => {
         console.log('Snipe list updated:', updatedList);
         // 获取当前余额
         await solana.getBalance().then(async (balance: number | undefined) => {
-            let totalSOLForPurchase = 0
+            let totalUSDTForPurchase = 0
             if (balance) {
-                totalSOLForPurchase = balance * 0.01;
+                totalUSDTForPurchase = balance * 0.5;
             }
             coloredDebug(`Your Balance: ${balance} SOL`)
             coloredWarn("-----------------------------------------------------------\n\n")
@@ -110,18 +110,44 @@ const buySnipe = async () => {
                     try {
                         const isTokenAddress = await solana.isTokenAddress(mintAddress);
                         if (isTokenAddress) {
-                            const token = await checkTokenInfo(new PublicKey(mintAddress));
-                            if (!token?.rug_ratio&&token?.renounced_mint === 1&& token?.top_10_holder_rate <0.3 && token?.burn_status != "none" && token?.pool_info?.liquidity >= 20000) {
-                                coloredInfo(`rug_ratio ${token?.rug_ratio}`);
+                            // const token = await checkTokenInfo(new PublicKey(mintAddress));
+                            // if (!token?.rug_ratio&&token?.renounced_mint === 1&& token?.top_10_holder_rate <0.3 && token?.burn_status != "none" && token?.pool_info?.liquidity >= 20000) {
+                            //     coloredInfo(`rug_ratio ${token?.rug_ratio}`);
+                            // await jupiter.createOrderLimit(
+                            //     totalUSDTForPurchase / tokens.length, // 分配给每个代币的SOL数量
+                            //     0,
+                            //     wallet!,
+                            //     'So11111111111111111111111111111111111111112',
+                            //     mintAddress
+                            // );
+                            await jupiter.getTokenSellingPrices(mintAddress).then(async (buyingingPrice) => {
+                                const amountToSellToken = 5*1000000 
+                                const tokenData = buyingingPrice?.data[mintAddress];
+                                const price = parseFloat(JSON.stringify(tokenData?.price)); // 将字符串转换为
+                                // 您期望通过卖出SOL获得的目标代币的数量
+                                // 这个值需要根据当前市场价格和您愿意接受的价格来确定
+                                const amountToExpectToken = amountToSellToken/price;
+                                // 卖出代币地址（SOL的Mint地址）
+                                const sellTokenAddress = new PublicKey('Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB');
+
+                                // 购买代币的Mint地址（您想要购买的代币的地址）
+                                const buyTokenAddress = new PublicKey(mintAddress);
+                                coloredInfo(`amountToSellToken-----:${amountToSellToken}`)
+                                coloredInfo(`amountToExpectToken-----:${amountToExpectToken}`)
+                                coloredInfo(`sellTokenAddress-----:${sellTokenAddress.toString()}`)
+                                coloredInfo(`buyTokenAddress-----:${buyTokenAddress.toString()}`)
+                                // 创建限价单
                                 await jupiter.createOrderLimit(
-                                    totalSOLForPurchase / tokens.length, // 分配给每个代币的SOL数量
-                                    0,
-                                    wallet!,
-                                    'So11111111111111111111111111111111111111112',
-                                    mintAddress
+                                    amountToSellToken, // 卖出的USDT数量
+                                    amountToExpectToken, // 期望获得的目标代币数量
+                                    wallet!, // 钱包对象
+                                    sellTokenAddress.toString(), // 卖出代币地址（USDT）
+                                    buyTokenAddress.toString() // 购买代币地址
                                 );
-                                coloredInfo(`Order created for ${totalSOLForPurchase / tokens.length} SOL worth of ${mintAddress}`);
-                            }
+                                coloredInfo(`Order created for ${totalUSDTForPurchase / tokens.length} SOL worth of ${mintAddress}`);
+
+                            });
+                            // }
                         }
                     } catch (error: any) {
                         coloredError(`Failed to create order for ${mintAddress}: ${error.message}`);

@@ -4,7 +4,7 @@ import asyncio
 import aiohttp
 import time
 # 定义输出文件路径
-output_file_path = 'sniper-list.txt'
+output_file_path = '../gmgn-list.txt'
 # 定义代理的IP地址和端口
 proxy_ip = '127.0.0.1'
 proxy_port = 10809
@@ -54,7 +54,7 @@ async def main():
                 if token['base_token_info']['top_10_holder_rate'] is None:
                     # 如果top_10_holder_rate为None，可以选择跳过这个token或者赋予一个默认值
                     continue  # 跳过这个token
-                if float(token['liquidity'])>1000 and float(token['base_token_info']['top_10_holder_rate'])<0.3 and token['base_token_info']['burn_status']=='burn' and token['base_token_info']['is_honeypot'] is None and token['base_token_info']['renounced_mint']==1 and token['launchpad'] != 'Pump.fun':
+                if float(token['liquidity'])>1000 and float(token['base_token_info']['top_10_holder_rate'])<0.3 and token['base_token_info']['burn_status']=='burn' and token['base_token_info']['is_honeypot'] is None and token['base_token_info']['renounced_mint']==1:
                 # if float(token['liquidity'])>1 and float(token['base_token_info']['top_10_holder_rate'])<0.9 and token['base_token_info']['burn_status']=='burn' and token['base_token_info']['is_honeypot'] is None and token['base_token_info']['renounced_mint']==1:
                         
                     url1='https://gmgn.ai/defi/quotation/v1/tokens/stats/sol/'+token['base_token_info']['address']

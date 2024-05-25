@@ -21,7 +21,7 @@ client = TelegramClient(
 known_addresses = set()
 
 # 将新地址追加到这个文件
-output_file_path = 'new_solana_addresses.txt'
+output_file_path = '../new_solana_addresses.txt'
 
 # 异步函数，用于从文件中读取所有已知的 Solana 地址
 async def load_known_addresses():

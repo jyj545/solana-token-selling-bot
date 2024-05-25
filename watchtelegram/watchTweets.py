@@ -1,6 +1,5 @@
 import os
 import time
-import asyncio
 from typing import List, NoReturn, Optional
 import httpx
 from twikit import Client, Tweet
@@ -35,9 +34,9 @@ class TwitterListener:
     def __init__(self, screen_names: List[str]):
         self.users = [TwitterUser(screen_name) for screen_name in screen_names]
         self.client = Client('en-US', timeout=60)
-        self.check_interval = 60  # 每1分钟检查一次
+        self.check_interval = 60*1.5  # 每1分钟检查一次
         self.known_addresses = set()
-        self.output_file_path = 'new_solana_addresses.txt'
+        self.output_file_path = '../tweet_addresses.txt'
 
     def load_or_login(self):
         """加载cookies或登录并保存cookies"""

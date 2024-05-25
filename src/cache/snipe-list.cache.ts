@@ -7,7 +7,7 @@ import sleep from '../utils/sleepTimout';
 export class SnipeListCache extends EventEmitter {
   private snipeList: Set<string> = new Set<string>();
 
-  private fileLocation = path.join(__dirname, '../../snipe-list.txt');
+  private fileLocation = path.join(__dirname, '../../tweet_addresses.txt');
 
   constructor() {
     super(); // 调用父类构造函数，初始化事件发射器
